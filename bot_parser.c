@@ -13,10 +13,19 @@ struct Response_t {
   size_t size;
 };
 
+response response_new(void) {
+  response r = malloc(sizeof(struct Response_t));
+  if (!r)
+    return NULL;
+  r->string = NULL;
+  r->size = 0;
+  return r;
+}
+
 static size_t save_response(char *data, size_t size, size_t nmemb,
                             void *clientp) {
-  size_t realsize = nmemb;
-  struct Response_t *mem = (struct Response_t *)clientp;
+  size_t realsize = nmemb * size;
+  response mem = (response)clientp;
 
   char *ptr = realloc(mem->string, mem->size + realsize + 1);
   if (!ptr)
@@ -30,22 +39,35 @@ static size_t save_response(char *data, size_t size, size_t nmemb,
   return realsize;
 }
 
-response bot_http(char *url) {
-  response json;
+void bot_http(char *url, response json) {
+  if (!json)
+    return;
+
+  free(json->string);
   json->string = malloc(1);
+  json->string[0] = '\0';
   json->size = 0;
+
   // Making the request
   CURL *curl = curl_easy_init();
   if (curl) {
     CURLcode res;
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, save_response);
-    curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&json);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)json);
     curl_easy_setopt(curl, CURLOPT_URL, url);
     res = curl_easy_perform(curl);
-    // free(json.string);
     curl_easy_cleanup(curl);
   }
-  return json;
+  // printf("%s", json->string);
+}
+
+char *json_string(response json) { return json->string; }
+
+void free_response(response r) {
+  if (!r)
+    return;
+  free(r->string);
+  free(r);
 }
 
 // outputs an url with the chosen method
@@ -53,21 +75,33 @@ response bot_http(char *url) {
 char *set_method(char *method) {
   // reading the API key
   FILE *fptr = fopen(".secret", "r");
-  int secret_lenght = 47;
-  char secret[secret_lenght];
-  fgets(secret, secret_lenght, fptr);
+  if (!fptr) {
+    fprintf(stderr, "Error: could not open .secret file\n");
+    return NULL;
+  }
+
+  // Read the API key dynamically
+  char secret[256]; // temporary stack buffer
+  if (!fgets(secret, sizeof(secret), fptr)) {
+    fclose(fptr);
+    fprintf(stderr, "Error: could not read secret\n");
+    return NULL;
+  }
   fclose(fptr);
 
-  // creating the URL string
-  char *prefix = "https://api.telegram.org/bot%s/"; // 29
-  int prefix_lenght = 29;
-  char *url = malloc((sizeof(char) * prefix_lenght) +
-                     (sizeof(char) * secret_lenght) + (sizeof(char) * strlen(method)) + 1); // 29+47+1
-  sprintf(url, prefix, secret);
-  // printf("%s\n", url);
+  // Remove trailing newline if present
+  secret[strcspn(secret, "\r\n")] = '\0';
 
-  // appending method
-  sprintf(url, "%s%s", url, method);
+  const char *prefix_fmt = "https://api.telegram.org/bot%s/%s";
+  size_t needed = snprintf(NULL, 0, prefix_fmt, secret, method) + 1;
+
+  char *url = malloc(needed);
+  if (!url) {
+    fprintf(stderr, "Error: malloc failed for URL\n");
+    return NULL;
+  }
+
+  snprintf(url, needed, prefix_fmt, secret, method);
   return url;
 }
 
