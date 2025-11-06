@@ -62,7 +62,7 @@ char *set_method(char *method) {
   char *prefix = "https://api.telegram.org/bot%s/"; // 29
   int prefix_lenght = 29;
   char *url = malloc((sizeof(char) * prefix_lenght) +
-                     (sizeof(char) * secret_lenght)); // 29+47
+                     (sizeof(char) * secret_lenght) + (sizeof(char) * strlen(method)) + 1); // 29+47+1
   sprintf(url, prefix, secret);
   // printf("%s\n", url);
 
