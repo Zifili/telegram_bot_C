@@ -13,6 +13,7 @@ struct Response_t {
   size_t size;
 };
 
+//------ JSON METHODS ------
 response response_new(void) {
   response r = malloc(sizeof(struct Response_t));
   if (!r)
@@ -22,6 +23,16 @@ response response_new(void) {
   return r;
 }
 
+char *response_string(response r) { return r->string; }
+
+void free_response(response r) {
+  if (!r)
+    return;
+  free(r->string);
+  free(r);
+}
+
+//------ CALLBACK FUNCTION ------
 static size_t save_response(char *data, size_t size, size_t nmemb,
                             void *clientp) {
   size_t realsize = nmemb * size;
@@ -39,21 +50,22 @@ static size_t save_response(char *data, size_t size, size_t nmemb,
   return realsize;
 }
 
-void bot_http(char *url, response json) {
-  if (!json)
+//------ HTTP/GET ------
+void bot_http(char *url, response r) {
+  if (!r)
     return;
 
-  free(json->string);
-  json->string = malloc(1);
-  json->string[0] = '\0';
-  json->size = 0;
+  free(r->string);
+  r->string = malloc(1);
+  r->string[0] = '\0';
+  r->size = 0;
 
   // Making the request
   CURL *curl = curl_easy_init();
   if (curl) {
     CURLcode res;
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, save_response);
-    curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)json);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)r);
     curl_easy_setopt(curl, CURLOPT_URL, url);
     res = curl_easy_perform(curl);
     curl_easy_cleanup(curl);
@@ -61,17 +73,8 @@ void bot_http(char *url, response json) {
   // printf("%s", json->string);
 }
 
-char *json_string(response json) { return json->string; }
-
-void free_response(response r) {
-  if (!r)
-    return;
-  free(r->string);
-  free(r);
-}
-
+//------ API SELECTION ------
 // outputs an url with the chosen method
-
 char *set_method(char *method) {
   // reading the API key
   FILE *fptr = fopen(".secret", "r");

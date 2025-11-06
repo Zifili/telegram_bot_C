@@ -7,7 +7,7 @@ typedef struct Response_t *response;
 
 extern response response_new(void);
 extern char *set_method(char *method);
-extern void bot_http(char *url, response json);
+extern void bot_http(char *url, response r);
 extern void free_response(response r);
-extern char *json_string(response json);
+extern char *response_string(response r);
 #endif // BOT_PARSER_H_
