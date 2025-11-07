@@ -1,7 +1,13 @@
+// -*- Mode : C -*-
+
+// bot_parser.c
+
 #ifndef BOT_PARSER_I
 #define BOT_PARSER_I
 
+#include <cjson/cJSON.h>
 #include <curl/curl.h>
+#include <curl/urlapi.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -60,8 +66,8 @@ void bot_http(char *url, response r) {
   r->string[0] = '\0';
   r->size = 0;
 
-  // Making the request
   CURL *curl = curl_easy_init();
+  // Making the request
   if (curl) {
     CURLcode res;
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, save_response);
@@ -70,10 +76,10 @@ void bot_http(char *url, response r) {
     res = curl_easy_perform(curl);
     curl_easy_cleanup(curl);
   }
-  // printf("%s", json->string);
+  cJSON *json = cJSON_Parse(r->string);
+  printf("%s\n\n\n\n\n", cJSON_Print(json));
 }
 
-//------ API SELECTION ------
 // outputs an url with the chosen method
 char *set_method(char *method) {
   // reading the API key
@@ -109,3 +115,4 @@ char *set_method(char *method) {
 }
 
 #endif // BOT_PARSER_I
+// bot_parser.c ends here.
